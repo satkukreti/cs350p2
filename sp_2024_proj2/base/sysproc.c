@@ -7,10 +7,20 @@
 #include "mmu.h"
 #include "proc.h"
 
+int child_first = 1;
+
 int
 sys_fork(void)
 {
   return fork();
+}
+
+int 
+sys_fork_winner(void)
+{
+  if(argint(0, &child_first) < 0) // fetch parameter
+    return -1;  
+  return 0;
 }
 
 int
