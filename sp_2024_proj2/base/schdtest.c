@@ -103,13 +103,11 @@ void print_proc_tickets(int cnt)
 {
     int child_cnt = cnt > MAX_CHILD_COUNT ? MAX_CHILD_COUNT : cnt;
     int i = 0; 
-    
-    printf(1, "parent (pid %d) has %d tickets.\n", getpid(), tickets_owned(getpid()));
-    
+       
     for (i = 0; i < child_cnt; i++)
     {  
         printf(1, "child (pid %d) has %d tickets.\n", child[i].pid, tickets_owned(child[i].pid));     
-    }    
+    }   
 }
 
 void wait_on_child_processes(int cnt)

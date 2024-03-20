@@ -30,7 +30,7 @@ sys_set_sched(void)
 {
   if(argint(0, &schedType) < 0)
   {
-    return -1
+    return -1;
   }
   return 0;
 }
@@ -38,7 +38,7 @@ sys_set_sched(void)
 int
 sys_tickets_owned(void)
 {
-  int pid;
+  /*int pid;
   if(argint(0, &pid) < 0)
   {
     return -1;
@@ -46,13 +46,24 @@ sys_tickets_owned(void)
   acquire(&ptable.lock);
   int amt = ptable.proc[pid].tickets;
   release(&ptable.lock);
-  return amt;
+  return amt;*/
+  return 0;
 }
 
 int
 sys_transfer_tickets(void)
 {
-  return 0;
+  int pid;
+  int tickets;
+
+  if(argint(0, &pid) < 0) 
+    return -3;
+  if(argint(1, &tickets) < 0)
+    return -1;
+
+  if(tickets < 0) return -1;
+
+  return transfer_tickets(pid, tickets);
 }
 
 int
@@ -154,3 +165,4 @@ int sys_enable_sched_trace(void)
 
   return 0;
 }
+

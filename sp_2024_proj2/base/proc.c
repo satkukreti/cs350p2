@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define STRIDE_TOTAL_TICKETS 100
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -564,3 +566,37 @@ procdump(void)
     cprintf("\n");
   }
 }
+int transfer_tickets(int pid, int tickets)
+{
+	struct proc *curproc = myproc();
+
+	int found = 0;
+	struct proc *p;
+	int tickets_after = 0;
+
+	if(tickets > (curproc->tickets) - 1) {
+		return -2;
+	}
+
+	acquire(&ptable.lock);
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+		if(p->pid == pid) {
+			found = 1;
+			curproc->tickets -= tickets;
+			p->tickets += tickets;
+
+			curproc->stride = (STRIDE_TOTAL_TICKETS * 10) / curproc->tickets;
+			p->stride = (STRIDE_TOTAL_TICKETS * 10) / p->tickets;
+			break;
+		}
+	}
+
+	release(&ptable.lock);
+
+	if(!found)
+		return -3;
+
+	return tickets_after;
+
+}
+
