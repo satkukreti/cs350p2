@@ -180,6 +180,7 @@ growproc(int n)
 
 
 extern int winner;
+extern int schedType;
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -208,7 +209,6 @@ fork(void)
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
-
   for(i = 0; i < NOFILE; i++)
     if(curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
@@ -219,6 +219,20 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
+    int nProc = 0;
+    struct proc *p;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
+      if (p->state == RUNNING || p->state == RUNNABLE)
+        nProc++;
+      p->pass = 0;
+    }
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
+      p->tickets = 100/(nProc+1);
+    }
+  curproc->pass = 0;
+  curproc->tickets = 100/(nProc+1);
   np->state = RUNNABLE;
   release(&ptable.lock);
 
@@ -269,7 +283,20 @@ exit(void)
         wakeup1(initproc);
     }
   }
-
+  int nProc = 0;
+  struct proc *p2;
+  for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++)
+  {
+    if (p2->state == RUNNING || p2->state == RUNNABLE)
+      nProc++;
+    p->pass = 0;
+  }
+  for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++)
+  {
+    p2->tickets = 100/(nProc+1);
+  }
+  curproc->pass = 0;
+  curproc->tickets = 100/(nProc+1);
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -328,8 +355,6 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-extern int schedType;
-
 void
 scheduler(void)
 {
@@ -339,36 +364,70 @@ scheduler(void)
   
   int ran = 0; // CS 350/550: to solve the 100%-CPU-utilization-when-idling problem
 
-  for(;;){
+  for(;;)
+  {
     // Enable interrupts on this processor.
     sti();
+    // Loop over process table looking for process to run.
+    acquire(&ptable.lock);
+    ran = 0;
+    if(!schedType)
+    {
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if(p->state != RUNNABLE)
+          continue;
 
-        // Loop over process table looking for process to run.
-        acquire(&ptable.lock);
-        ran = 0;
-        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-          if(p->state != RUNNABLE)
-            continue;
+        ran = 1;
+    
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
 
-          ran = 1;
-      
-          // Switch to chosen process.  It is the process's job
-          // to release ptable.lock and then reacquire it
-          // before jumping back to us.
-          c->proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
 
-          swtch(&(c->scheduler), p->context);
-          switchkvm();
-
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          c->proc = 0;
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+    }
+    else
+    {
+      struct proc *lowestProc;
+      int lowestPass = 99999999;
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if(p->state != RUNNABLE)
+          continue;
+        if(p->pass < lowestPass)
+        {
+          lowestPass = p->pass;
+          lowestProc = p;
+        }
+        if(p->pass == lowestPass)
+        {
+          if(p->pid < lowestProc->pid)
+          {
+            lowestProc = p;
+          }
+        }
+      }
+      ran = 1;
+      c->proc = lowestProc;
+      switchuvm(lowestProc);
+      lowestProc->state = RUNNING;
+      swtch(&(c->scheduler), lowestProc->context);
+      switchkvm();
+      c->proc = 0;
     }
     release(&ptable.lock);
 
-    if (ran == 0){
+    if (ran == 0)
+    {
         halt();
     }
   }
@@ -600,3 +659,17 @@ int transfer_tickets(int pid, int tickets)
 
 }
 
+int ticket_owned(int pid)
+{
+  acquire(&ptable.lock);
+  for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->pid == pid)
+    {
+      release(&ptable.lock);
+      return p->tickets;
+    }
+  }
+  release(&ptable.lock);
+  return -1;
+}

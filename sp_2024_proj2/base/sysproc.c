@@ -38,16 +38,12 @@ sys_set_sched(void)
 int
 sys_tickets_owned(void)
 {
-  /*int pid;
+  int pid;
   if(argint(0, &pid) < 0)
   {
     return -1;
   }
-  acquire(&ptable.lock);
-  int amt = ptable.proc[pid].tickets;
-  release(&ptable.lock);
-  return amt;*/
-  return 0;
+  return ticket_owned(pid);
 }
 
 int
