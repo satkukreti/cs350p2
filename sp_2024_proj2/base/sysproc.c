@@ -59,7 +59,7 @@ sys_transfer_tickets(void)
 
   if(tickets < 0) return -1;
 
-  return transfer_tickets(pid, tickets);
+  return transfer_ticket(pid, tickets);
 }
 
 int

@@ -190,7 +190,6 @@ fork(void)
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
-
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -219,21 +218,25 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
-    int nProc = 0;
-    struct proc *p;
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
-      if (p->state == RUNNING || p->state == RUNNABLE)
-        nProc++;
-      p->pass = 0;
-    }
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    {
-      p->tickets = 100/(nProc+1);
-    }
-  curproc->pass = 0;
-  curproc->tickets = 100/(nProc+1);
+  int nProc = 0;
+  struct proc *p;
   np->state = RUNNABLE;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNING || p->state == RUNNABLE)
+    {
+      nProc++;
+    }
+  }
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if(p->state == RUNNING || p->state == RUNNABLE)
+    {
+      p->pass = 0;
+      p->tickets = STRIDE_TOTAL_TICKETS/(nProc);
+      p->stride = (STRIDE_TOTAL_TICKETS * 10)/p->tickets;
+    }
+  }
   release(&ptable.lock);
 
   if(winner)
@@ -283,7 +286,7 @@ exit(void)
         wakeup1(initproc);
     }
   }
-  int nProc = 0;
+/*   int nProc = 0;
   struct proc *p2;
   for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++)
   {
@@ -294,9 +297,7 @@ exit(void)
   for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++)
   {
     p2->tickets = 100/(nProc+1);
-  }
-  curproc->pass = 0;
-  curproc->tickets = 100/(nProc+1);
+  } */
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -398,11 +399,13 @@ scheduler(void)
     else
     {
       struct proc *lowestProc;
-      int lowestPass = 99999999;
+      int lowestPass = 9999999;
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
       {
         if(p->state != RUNNABLE)
           continue;
+        p->stride = (STRIDE_TOTAL_TICKETS * 10)/p->tickets;
+        //cprintf("%d STRIDE: %d\n", p->pid, p->stride);
         if(p->pass < lowestPass)
         {
           lowestPass = p->pass;
@@ -416,6 +419,7 @@ scheduler(void)
           }
         }
       }
+      lowestProc->pass = lowestProc->pass + lowestProc->stride;
       ran = 1;
       c->proc = lowestProc;
       switchuvm(lowestProc);
@@ -466,7 +470,6 @@ yield(void)
   if (sched_trace_enabled)
   {
     cprintf("%d", myproc()->pid);
-    
     sched_trace_counter++;
     if (sched_trace_counter % 20 == 0)
     {
@@ -625,7 +628,7 @@ procdump(void)
     cprintf("\n");
   }
 }
-int transfer_tickets(int pid, int tickets)
+int transfer_ticket(int pid, int tickets)
 {
 	struct proc *curproc = myproc();
 
