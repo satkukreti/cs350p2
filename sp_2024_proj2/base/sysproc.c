@@ -7,7 +7,7 @@
 #include "mmu.h"
 #include "proc.h"
 
-int child_first = 1;
+int winner = 0;
 
 int
 sys_fork(void)
@@ -18,8 +18,14 @@ sys_fork(void)
 int 
 sys_fork_winner(void)
 {
-  if(argint(0, &child_first) < 0) // fetch parameter
+  if(argint(0, &winner) < 0) // fetch parameter
     return -1;  
+  return 0;
+}
+
+int
+sys_set_sched(void)
+{
   return 0;
 }
 
