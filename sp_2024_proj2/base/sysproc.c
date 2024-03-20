@@ -23,8 +23,34 @@ sys_fork_winner(void)
   return 0;
 }
 
+int schedType = 0;
+
 int
 sys_set_sched(void)
+{
+  if(argint(0, &schedType) < 0)
+  {
+    return -1
+  }
+  return 0;
+}
+
+int
+sys_tickets_owned(void)
+{
+  int pid;
+  if(argint(0, &pid) < 0)
+  {
+    return -1;
+  }
+  acquire(&ptable.lock);
+  int amt = ptable.proc[pid].tickets;
+  release(&ptable.lock);
+  return amt;
+}
+
+int
+sys_transfer_tickets(void)
 {
   return 0;
 }

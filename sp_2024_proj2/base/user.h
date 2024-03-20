@@ -23,8 +23,10 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int fork_winner(int winner);
-int set_sched(int scheduler);
+int fork_winner(int);
+int set_sched(int);
+int tickets_owned(int pid);
+int transfer_tickets(int pid, int tickets);
 
 // ulib.c
 int stat(char*, struct stat*);
