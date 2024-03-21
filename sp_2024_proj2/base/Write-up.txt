@@ -31,3 +31,22 @@ Q2: (10 points) After fork() is called, why does the parent process run before t
 	-> After a fork() system call is called in xv6, the kernel creates a new process called the child process, which is an exact copy of the parent process. When fork() is called, The parent process calls fork(), and the kernel creates a new process (the child process) by duplicating the parent's address space, file descriptors, and other resource.After the child process is created, both the parent and child processes are marked as runnable and added to the scheduler's run queue.The scheduler then selects a process from the run queue to run on the CPU. In many operating systems, including xv6, the scheduler often gives priority to the parent process over the child process when both are in the runnable state. As a result, the parent process is more likely to be scheduled to run first after a fork(). One common scenario is when the parent process explicitly waits for the child process to terminate using the wait() system call. In this scenario, the parent process may yield the CPU to allow the child process to start execution, and then the parent process waits for the child to complete before continuing its own execution.
 		
 Q3: (10 points) When the scheduler de-schedules an old process and schedules a new process, it saves the context (i.e., the CPU registers) of the old process and load the context of the new process. Show the code which performs these context saving/loading operations. Show how this piece of code is reached when saving the old process’s and loading the new process’s context.
+
+Code from void scheduler(void) in proc.c:
+...
+// Switch to chosen process.  It is the process's job
+// to release ptable.lock and then reacquire it
+// before jumping back to us.
+c->proc = p;
+switchuvm(p);
+p->state = RUNNING;
+
+swtch(&(c->scheduler), p->context);
+switchkvm();
+
+// Process is done running for now.
+// It should have changed its p->state before coming back.
+c->proc = 0;
+...
+
+The scheduler function loops through the process table looking for a process to run, depending on whether its state is RUNNABLE or RUNNING. The selected process will run in the scheduler until they finish executing or their time is up. The scheduler uses switchuvm(p) to switch to the memory contents of process p. It sets the state of p to RUNNING and gets executed by the CPU. Then, the swtch() function performs a context switch which saves the current/old process's context (like CPU registers) into the scheduler field of c. It then loads the context of the new process.
