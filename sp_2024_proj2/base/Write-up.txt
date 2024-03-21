@@ -3,7 +3,28 @@ Q1: (10 points) Does the xv6 kernel use cooperative approach or non-cooperative 
 	-> In the xv6 kernel, the approach used to gain control while a user process is running is a non-cooperative approach. It uses a trap mechanism to switch from user mode to kernel mode when needed. When a trap happens, the processor transfers control to a specific interrupt handler in the kernel, which performs the required operations. Once the handler completes its task, control is returned to the interrupted user process, allowing it to continue execution as if nothing happened.
 
 Code from trap() in trap.c:
-(tf->trapno == T_SYSCALL) -------- checks if the trap is associated with a system call
+void
+trap(struct trapframe *tf)
+{
+  if(tf->trapno == T_SYSCALL){ ------- checks if the trap is associated with a system call and handles the system call
+    ...
+  }
+
+  switch(tf->trapno){ ----------- handles the interrupts
+  case T_IRQ0 + IRQ_TIMER:
+     	...
+  case T_IRQ0 + IRQ_IDE:
+	...
+  case T_IRQ0 + IRQ_IDE+1:
+   	...
+  case T_IRQ0 + IRQ_KBD:
+	...
+  case T_IRQ0 + IRQ_COM1:
+     	...
+  case T_IRQ0 + 7:
+  case T_IRQ0 + IRQ_SPURIOUS:
+    	...
+}
 
 	
 Q2: (10 points) After fork() is called, why does the parent process run before the child process in most of the cases? In what scenario will the child process run before the parent process after fork()?
