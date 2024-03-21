@@ -1,0 +1,1 @@
+Me (Satvik) and Kieran helped Brendon with coding the fork race condition and stride scheduler. Brendon did most of the coding for these parts. Deepanshi completed the transfer_tickets. Kieran did Q1, Deepanshi did Q2, and I solved Q3.
